@@ -32,7 +32,11 @@ LABEL_SMOOTH = 0.1  # ls
 TEMPERATURE = 0.05  # soft
 LAM = 1.0  # cost
 
-TOKENIZER = "physical-intelligence/fast"  # must match the tokenizer training uses
+# Must be the tokenizer training actually uses, or the distances are computed for the wrong
+# vocabulary and cost/soft go quietly wrong. This is openpi's default. Only change it if your
+# config sets Pi0FASTConfig.fast_model_tokenizer_kwargs["fast_tokenizer_path"] to something
+# else; then put that value here and re-run gate_null_limits.py.
+TOKENIZER = "physical-intelligence/fast"
 CACHE_DIR = ".cache"  # where the cost table is kept between runs
 
 PALIGEMMA_VOCAB_SIZE = 257152
@@ -109,9 +113,22 @@ def build_cost_table(tokenizer: str = TOKENIZER, cache_dir: str | None = CACHE_D
     return cost, gather
 
 
+def _report(cost, gather, tokenizer: str) -> None:
+    """Print which tokenizer the table was built from. Check this against the training log:
+    a table built for the wrong tokenizer is not an error, just wrong distances."""
+    finite = cost < LARGE_COST
+    print(
+        f"[action_losses] KIND={KIND} table from {tokenizer}: {cost.shape[0]} action tokens, "
+        f"ids [{int(gather.min())}, {int(gather.max())}], "
+        f"{100.0 * finite.mean():.1f}% of token pairs have a real distance",
+        flush=True,
+    )
+
+
 @functools.lru_cache(maxsize=1)
 def _table():
     cost, gather = build_cost_table()
+    _report(cost, gather, TOKENIZER)
     return jnp.asarray(cost), jnp.asarray(gather), int(gather.min()), int(gather.max()), len(gather)
 
 

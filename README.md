@@ -13,8 +13,19 @@ wrong the resulting action is. `KIND = "ce"` reproduces openpi's own loss exactl
 
 ## Step 1
 
-Copy `action_losses.py` to `openpi/src/openpi/models/action_losses.py` and set `KIND` and
-`TOKENIZER` at the top of it.
+Copy `action_losses.py` to `openpi/src/openpi/models/action_losses.py` and set `KIND` at the
+top of it.
+
+Leave `TOKENIZER` alone unless your config overrides openpi's default. It has to be the
+tokenizer training actually uses, because the distances between tokens are computed for that
+vocabulary; the wrong one is not an error, just wrong distances. The default is
+`physical-intelligence/fast`, which is what `FASTTokenizer` uses. You have overridden it only
+if your `Pi0FASTConfig` sets `fast_model_tokenizer_kwargs["fast_tokenizer_path"]` — then put
+that value in `TOKENIZER` and run `python gate_null_limits.py` once to confirm the table can
+be built for it.
+
+On the first training step the file prints one line naming the tokenizer it built the table
+from, how many action tokens it found, and their id range. Check it against your config.
 
 ## Step 2 — for `ce`, `ls`, `soft`, `cost`
 
@@ -80,7 +91,7 @@ Only that line. Line 158 is the decode path for evaluation and must stay as it i
 | File | Contains |
 |---|---|
 | `action_losses.py` | all four losses, the cost table, and the `aug` encoder |
-| `gate_null_limits.py` | checks each loss equals plain cross-entropy at its null setting; `python gate_null_limits.py` |
+| `gate_null_limits.py` | self-check: each loss equals plain cross-entropy at its null setting. Already run and passing, so it is not needed to use this. Re-run `python gate_null_limits.py` if you change `TOKENIZER` or edit the losses; seconds on CPU, no model needed. |
 
 ## What we measured
 
